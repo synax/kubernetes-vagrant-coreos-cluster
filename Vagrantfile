@@ -298,8 +298,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             run_remote "/opt/bin/kubectl config set-context local --cluster=default-cluster --user=default-admin"
             run_remote "/opt/bin/kubectl config use-context local"
           else
-            system "kubectl config set-cluster default-cluster --server=https://#{MASTER_IP} --certificate-authority=artifacts/tls/ca.pem"
-            system "kubectl config set-credentials default-admin --certificate-authority=artifacts/tls/ca.pem --client-key=artifacts/tls/admin-key.pem --client-certificate=artifacts/tls/admin.pem"
+            system "kubectl config set-cluster default-cluster --server=https://#{MASTER_IP} --certificate-authority=/vagrant/artifacts/tls/ca.pem"
+            system "kubectl config set-credentials default-admin --certificate-authority=/vagrant/artifacts/tls/ca.pem --client-key=/vagrant/artifacts/tls/admin-key.pem --client-certificate=/vagrant/artifacts/tls/admin.pem"
             system "kubectl config set-context local --cluster=default-cluster --user=default-admin"
             system "kubectl config use-context local"
           end
@@ -380,7 +380,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         # clean temp directory after master is destroyed
         kHost.trigger.after [:destroy] do
           FileUtils.rm_rf(Dir.glob("#{__dir__}/temp/*"))
-          FileUtils.rm_rf(Dir.glob("#{__dir__}/artifacts/tls/*"))
+          FileUtils.rm_rf(Dir.glob("#{__dir__}/vagrant/artifacts/tls/*"))
         end
       end
 

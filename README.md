@@ -1,7 +1,9 @@
-# kubernetes-vagrant-coreos-cluster
+# Parts Unlimited Kubernetes PoC 
+This repository contains the parts unlimited PoC as vagrant turnkey solution. (Forked from - kubernetes-vagrant-coreos-cluster)
 Turnkey **[Kubernetes](https://github.com/GoogleCloudPlatform/kubernetes)**
 cluster setup with **[Vagrant 1.8,6+](https://www.vagrantup.com)** and
 **[CoreOS](https://coreos.com)**.
+
 
 ####If you're lazy, or in a hurry, jump to the [TL;DR](#tldr) section.
 
