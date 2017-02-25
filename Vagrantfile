@@ -73,7 +73,7 @@ DOCKERCFG = File.expand_path(ENV['DOCKERCFG'] || "~/.dockercfg")
 DOCKER_OPTIONS = ENV['DOCKER_OPTIONS'] || ''
 
 
-BOX_TIMEOUT_COUNT = ENV['BOX_TIMEOUT_COUNT'] || 50
+BOX_TIMEOUT_COUNT = ENV['BOX_TIMEOUT_COUNT'] || 200
 
 # check either 'http_proxy' or 'HTTP_PROXY' environment variable
 enable_proxy = !(ENV['HTTP_PROXY'] || ENV['http_proxy'] || '').empty?
@@ -219,23 +219,18 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                             set interfaces ethernet eth2 address #{base_ip_addr}.1/24
                             set interfaces ethernet eth2 description 'Untagged'
 
-                            #Enable DNS forwarding for private network
-                            #set service dns forwarding system
-                            #set service dns forwarding cache-size 0
-
-                            # Home
-                            set system gateway-address #{clusters['router_external_gateway']}
-                            set system name-server #{clusters['router_external_dns']}
-
-                            set service dns forwarding listen-on eth2
+                            # Use google DNS servers
+                            set system name-server 8.8.4.4
+                            set system name-server 8.8.8.8
+                            #set system gateway-address #{clusters["router_external_gateway"]}
 
                             #Configure NAT
-                            set nat source rule 100 outbound-interface eth1
-                            set nat source rule 100 translation address masquerade
-
+                            set nat source rule 10 outbound-interface eth1
+                            set nat source rule 10 source address #{base_ip_addr}.0/24
+                            set nat source rule 10 translation address masquerade
+                        
                             set protocols static route 0.0.0.0/0 next-hop #{clusters['router_external_gateway']} distance '1'
-                            set protocols static route #{base_ip_addr}.0/16 next-hop 0.0.0.0
-
+                            #set protocols static route #{base_ip_addr}.0/16 next-hop 0.0.0.0
 
                             commit
                             save
@@ -343,12 +338,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                           kHost.trigger.after [:up] do
                             info "Waiting for Kubernetes master to become ready..."
+                            start_time = Time.now
                             j, uri, res = 0, URI("http://#{master_ip}:8080"), nil
+                            info "Trying to connect to: http://#{master_ip}:8080"
                             loop do
                               j += 1
                               begin
                                 res = Net::HTTP.get_response(uri)
                               rescue
+                                info "Waiting for: #{Time.now-start_time}"
+                                info "Sleeping for 10 seconds..."
                                 sleep 10
                               end
                               break if res.is_a? Net::HTTPSuccess or j >= BOX_TIMEOUT_COUNT
