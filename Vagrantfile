@@ -48,6 +48,8 @@ end
 
 required_plugins.push('vagrant-timezone')
 
+required_plugins.push('vagrant-vyos')
+
 required_plugins.each do |plugin|
   need_restart = false
   unless Vagrant.has_plugin? plugin
@@ -146,7 +148,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # always use Vagrants' insecure key
     config.ssh.insert_key = false
     config.ssh.forward_agent = true   
-
    
     config.vm.provider :virtualbox do |v|
       # On VirtualBox, we don't have guest additions or a functional vboxsf
@@ -197,7 +198,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 
                   # Synced folders is not needed (and doesn't work) with the vyos box used...
                   rHost.vm.synced_folder ".", "/vagrant", disabled: true
-              
+                
+                 ["parallels", "virtualbox"].each do |h|
+                    rHost.vm.provider h do |n|
+                      n.memory = memory
+                      n.cpus = cpus
+                    end
+                  end
+                              
                   rHost.vm.box = "higebu/vyos"
                   if clusters["router_external_ip"]
                     rHost.vm.network :public_network, ip: clusters["router_external_ip"]
@@ -226,7 +234,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                             #Configure NAT
                             set nat source rule 10 outbound-interface eth1
-                            set nat source rule 10 source address #{base_ip_addr}.0/24
+                            #set nat source rule 10 source address #{base_ip_addr}.0/24
                             set nat source rule 10 translation address masquerade
                         
                             set protocols static route 0.0.0.0/0 next-hop #{clusters['router_external_gateway']} distance '1'
@@ -551,7 +559,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                           inline: "route del default gw 10.0.2.2"
 
                         # you can override this in synced_folders.yaml
-                        kHost.vm.synced_folder ".", "/vagrant", disabled: true
+                         kHost.vm.synced_folder ".", "/vagrant", disabled: true
 
                         begin
                           MOUNT_POINTS.each do |mount|
@@ -578,7 +586,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                             end
                           end
                         rescue
-                        end
+                        end             
 
                         if USE_DOCKERCFG && File.exist?(DOCKERCFG)
                           kHost.vm.provision :file, run: "always",
