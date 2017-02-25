@@ -195,12 +195,20 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
               config.vm.define vmName = hostname do |rHost|
 
                   rHost.vm.hostname = vmName
+
+                  rHost.vm.provider :virtualbox do |v, override|
+                      v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+                      v.customize ["modifyvm", :id, "--nictype2", "virtio"]
+                      v.customize ["modifyvm", :id, "--nictype3", "virtio"]
+                      v.customize ["modifyvm", :id, "--nictype4", "virtio"]
+                  end
                 
                   # Synced folders is not needed (and doesn't work) with the vyos box used...
                   rHost.vm.synced_folder ".", "/vagrant", disabled: true
                 
-                 ["parallels", "virtualbox"].each do |h|
+                 ["virtualbox"].each do |h|
                     rHost.vm.provider h do |n|
+                      n.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
                       n.memory = memory
                       n.cpus = cpus
                     end
@@ -214,6 +222,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                   end
                   rHost.vm.network :private_network, virtualbox__intnet: "network-#{cluster_name}"
 
+
+            # set default gateway to vyos network
+                 # rHost.vm.provision "shell",
+                 #   inline: "route add default gw #{base_ip_addr}.1"
+                  # delete default gw on eth0
+                  rHost.vm.provision "shell",
+                    inline: "route del default gw 10.0.2.2"
+
                   rHost.vm.provision "shell",                
                   inline: <<-EOF #!/bin/vbash
 
@@ -226,19 +242,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                             #Configure vLans for private network
                             set interfaces ethernet eth2 address #{base_ip_addr}.1/24
                             set interfaces ethernet eth2 description 'Untagged'
+                            
+                            set system name-server #{clusters["router_external_dns"]}
+                            set system gateway-address #{clusters["router_external_gateway"]}
 
-                            # Use google DNS servers
-                            set system name-server 8.8.4.4
-                            set system name-server 8.8.8.8
-                            #set system gateway-address #{clusters["router_external_gateway"]}
+                            set service dns forwarding listen-on eth2
 
                             #Configure NAT
-                            set nat source rule 10 outbound-interface eth1
-                            #set nat source rule 10 source address #{base_ip_addr}.0/24
-                            set nat source rule 10 translation address masquerade
+                            set nat source rule 100 outbound-interface eth1
+                            set nat source rule 100 source address #{base_ip_addr}.0/24
+                            set nat source rule 100 translation address masquerade
                         
                             set protocols static route 0.0.0.0/0 next-hop #{clusters['router_external_gateway']} distance '1'
-                            #set protocols static route #{base_ip_addr}.0/16 next-hop 0.0.0.0
+                            set protocols static route #{base_ip_addr}.0/16 next-hop 0.0.0.0
 
                             commit
                             save
@@ -545,6 +561,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                             n.memory = memory
                             n.cpus = cpus
                           end
+                        end
+
+                        kHost.vm.provider :virtualbox do |v, override|
+                          v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+                          v.customize ["modifyvm", :id, "--nictype2", "virtio"]
+                          v.customize ["modifyvm", :id, "--nictype3", "virtio"]
+                          v.customize ["modifyvm", :id, "--nictype4", "virtio"]
                         end
                         
                         # network config
