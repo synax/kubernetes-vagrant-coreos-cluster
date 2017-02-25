@@ -6,7 +6,7 @@ set -o pipefail
 
 cert_group=kube-cert
 cert_dir=/etc/kubernetes/ssl
-host_cert_dir=/vagrant/artifacts/tls
+host_cert_dir=/vagrant/artifacts/__CLUSTER_NAME__/tls
 
 mkdir -p "$cert_dir"
 

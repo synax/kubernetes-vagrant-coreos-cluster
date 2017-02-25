@@ -10,7 +10,7 @@ metadata:
     version: v1.4.1
     kubernetes.io/cluster-service: "true"
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     k8s-app: kubernetes-dashboard
   template:

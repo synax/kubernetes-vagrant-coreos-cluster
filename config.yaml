@@ -1,0 +1,21 @@
+#Clusters
+---
+  - cluster: 
+    cluster_name: usa
+    dns_domain: usa.com
+    kubernetes_version: 1.5.3
+    use_kube_ui: true
+    router_external_ip: 192.168.1.55
+    base_ip_addr: 172.16.0 # 172.16.0 ore something
+    router_mem: 512
+    router_cpus: 2
+    router_external_gateway: 192.168.1.1
+    router_external_dns: 192.168.1.1
+    master_mem: 1024
+    master_cpus: 2
+    master_yaml: master.yaml
+    nodes: 3
+    node_mem: 2048
+    node_cpus: 2
+    node_yaml: node.yaml
+    dns_upstream_servers: "8.8.8.8:53,8.8.4.4:53"
