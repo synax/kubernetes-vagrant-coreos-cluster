@@ -139,6 +139,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
     dns_domain= clusters['dns_domain']
 
+    etcd_seed_cluster = "#{cluster_name}-master=http://#{base_ip_addr}.102:2380"   
+    master_ip =  "#{base_ip_addr}.102"
+
+
     use_kube_ui = clusters['use_kube_ui']
     kubernetes_version = clusters['kubernetes_version']
 
@@ -264,19 +268,17 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
           
         else #ENDREGION Deploy Router
          #REGION Deploy Kubernetes
+         
                 if i == 2
-                  hostname = "#{cluster_name}-master"  
-                  etcd_seed_cluster = "#{hostname}=http://#{base_ip_addr}.#{i+100}:2380"            
+                  hostname = "#{cluster_name}-master"          
                   cfg = master_yaml
                   memory = clusters["master_mem"]
                   cpus = clusters["master_cpus"]
-                  master_ip =  "#{base_ip_addr}.#{i+100}"
                 else
                   hostname = "#{cluster_name}-node-%02d" % (i - 2)
                   cfg =  node_yaml
                   memory = clusters["node_mem"]
                   cpus = clusters["node_cpus"]
-                  master_ip =  "#{base_ip_addr}.#{i+100}"
                 end              
 
                 config.vm.define vmName = hostname do |kHost|
@@ -363,15 +365,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                           kHost.trigger.after [:up] do
                             info "Waiting for Kubernetes master to become ready..."
                             start_time = Time.now
-                            j, uri, res = 0, URI("http://#{master_ip}:8080"), nil
                             info "Trying to connect to: http://#{master_ip}:8080"
+                            j, uri, res = 0, URI("http://#{master_ip}:8080"), nil
+                    
                             loop do
                               j += 1
                               begin
                                 res = Net::HTTP.get_response(uri)
                               rescue
-                                info "Waiting for: #{Time.now-start_time}"
-                                info "Sleeping for 10 seconds..."
+                                info "Waited for #{Time.now-start_time} seconds, will sleep for 10 more seconds..."
                                 sleep 10
                               end
                               break if res.is_a? Net::HTTPSuccess or j >= BOX_TIMEOUT_COUNT
@@ -477,18 +479,20 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                           # clean temp directory after master is destroyed
                           kHost.trigger.after [:destroy] do
-                            FileUtils.rm_rf(Dir.glob("#{__dir__}/temp/*"))
-                            FileUtils.rm_rf(Dir.glob("#{__dir__}/vagrant/artifacts/#{cluster_name}/tls/*"))
+                             FileUtils.rm_rf(Dir.glob("#{__dir__}/temp/#{cluster_name}-*"))
+                            FileUtils.rm_rf(Dir.glob("#{__dir__}/artifacts/#{cluster_name}/tls/*"))
                           end
                         end
 
-                        if vmName == "#{cluster_name}-node-%02d" % (i - 1)
+                        if vmName == "#{cluster_name}-node-%02d" % (i - 2)
                           kHost.trigger.before [:up, :provision] do
                             info "#{Time.now}: setting up node..."
                           end
 
                           kHost.trigger.after [:up] do
-                            info "Waiting for Kubernetes minion [node-%02d" % (i - 1) + "] to become ready..."
+                            info "Waiting for Kubernetes minion [#{cluster_name}-node-%02d" % (i - 2) + "] to become ready..."
+                                     start_time = Time.now
+                            info "Trying to connect to: http://#{base_ip_addr}.#{i+100}:10250"
                             j, uri, hasResponse = 0, URI("http://#{base_ip_addr}.#{i+100}:10250"), false
                             loop do
                               j += 1
@@ -498,6 +502,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                               rescue Net::HTTPBadResponse
                                 hasResponse = true
                               rescue
+                                  info "Waited for #{Time.now-start_time} seconds, will sleep for 10 more seconds..."                                
                                 sleep 10
                               end
                               break if hasResponse or j >= BOX_TIMEOUT_COUNT
